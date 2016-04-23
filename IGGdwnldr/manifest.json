@@ -1,0 +1,18 @@
+{
+	"name" : "IGGdwnldr",
+	"description" : "Download any IGG games in one click",
+	"version" : "1.0",
+	"permissions" : [
+		"downloads", "tabs", "http://igg-games.com/*", "https://mega.nz/*"
+	],
+	"browser_action" : {
+		"default_title" : "Download this IGG game",
+		"default_icon" : "icon.png",
+		"default_popup" : "popup.html"
+	},
+	"background" : {
+		"scripts" : ["thirdParty/jquery-2.2.3.min.js", "popup.js"],
+		"persistent" : true
+	},
+	"manifest_version" : 2
+}
