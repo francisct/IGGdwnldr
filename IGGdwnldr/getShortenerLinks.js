@@ -13,6 +13,6 @@ var megaAnchors = megaDiv.find('a');
 var links = getLinks(megaAnchors);
 var json = JSON.stringify(links);
 
-chrome.runtime.sendMessage({action: 'handleShortenerLinks', shortenerLinks: json}, function(text){
+chrome.runtime.sendMessage({action: 'handleShortenerLinksAction', shortenerLinks: json}, function(text){
 	
 });

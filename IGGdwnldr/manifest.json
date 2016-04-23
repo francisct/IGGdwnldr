@@ -3,7 +3,7 @@
 	"description" : "Download any IGG games in one click",
 	"version" : "1.0",
 	"permissions" : [
-		"downloads", "tabs", "http://igg-games.com/*", "https://mega.nz/*"
+		"downloads", "tabs", "http://igg-games.com/*", "https://mega.nz/*", "http://ay.gy/*", "http://adf.ly/*"
 	],
 	"browser_action" : {
 		"default_title" : "Download this IGG game",

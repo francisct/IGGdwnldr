@@ -10,22 +10,20 @@ var nextMegaLink;
 document.addEventListener('DOMContentLoaded', function () {
 	document.getElementById("download").addEventListener('click', click);
 });
-/*
+
 chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-console.log("onmessage listener called");
-		if (request.action == 'handleShortenerLinks') {
-			handleShortenerLinks(request, sender, sendResponse);
-		} else if (request.action == 'openNewMegaLink') {
-			openNewMegaLink(request, sender, sendResponse);
-		} 
+	console.log("onmessage listener called");
+	if (request.action == 'handleShortenerLinksAction') {
+		handleShortenerLinks(request, sender, sendResponse);
+	} else if (request.action == 'openNewMegaLinkAction') {
+		openNewMegaLink(request, sender, sendResponse);
+	}
 
-		sendResponse({
-			test : "good test"
-		});
-
+	sendResponse({
+		test : "good test"
 	});
-*/
 
+});
 
 chrome.downloads.onCreated.addListener(function (downloadItem) {
 
@@ -37,10 +35,13 @@ chrome.downloads.onCreated.addListener(function (downloadItem) {
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, info) {
-	if (nextShortenerLink != undefined && tabId == nextShortenerLink.id && info.status == "complete") {
-		getMegaLinkFromShortener(tabId);
-	} else if (nextMegaLink != undefined && tabId == nextMegaLink.id && info.status == "complete") {
+	//if the new tab is a mega link
+	if (nextMegaLink != undefined && tabId == nextMegaLink.id && info.status == "complete") {
 		startMegaDownload(tabId);
+	}
+	//else the new tab is a shortener link
+	else if (info.status == "complete"){
+		getMegaLinkFromShortener(tabId);
 	}
 });
 
@@ -80,16 +81,13 @@ function openNextShortenerLink() {
 }
 
 function getMegaLinkFromShortener(shortenerTabId) {
-	//let the shortener timer run out
-	setTimeout(function () {
+	chrome.tabs.executeScript(shortenerTabId, {
+		file : 'thirdParty/jquery-2.2.3.min.js'
+	}, function () {
 		chrome.tabs.executeScript(shortenerTabId, {
-			file : 'thirdParty/jquery-2.2.3.min.js'
-		}, function () {
-			chrome.tabs.executeScript(shortenerTabId, {
-				file : 'getMegaLinkFromShortener.js'
-			});
+			file : 'getMegaLinkFromShortener.js'
 		});
-	}, 8000);
+	});
 }
 
 function openNewMegaLink(request, sender, sendResponse) {
@@ -106,15 +104,13 @@ function openNewMegaLink(request, sender, sendResponse) {
 }
 
 function startMegaDownload(megaTabId) {
-	//mega loads some content dynamically, so let a few seconds to make sure everything is loaded properly
-	setTimeout(function () {
+
+	chrome.tabs.executeScript(megaTabId, {
+		file : 'thirdParty/jquery-2.2.3.min.js'
+	}, function () {
 		chrome.tabs.executeScript(megaTabId, {
-			file : 'thirdParty/jquery-2.2.3.min.js'
-		}, function () {
-			chrome.tabs.executeScript(megaTabId, {
-				file : 'startMegaDownload.js'
-			});
+			file : 'startMegaDownload.js'
 		});
-	}, 3000);
+	});
 
 }
