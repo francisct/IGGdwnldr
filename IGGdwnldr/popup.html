@@ -3,32 +3,86 @@
   <head>
     <title>Set Page Color Popup</title>
     <style>
+	@import url(https://fonts.googleapis.com/css?family=Economica);
+	
     body {
+	margin:4px;
+	  width:600px;
       overflow: hidden;
-      margin: 0px;
-      padding: 0px;
       background: white;
+      
     }
+	
+	*{
+	transition: all 0.3s ease-in-out;
+	}
+	
+	hr{
+	margin-top:7px;
+	}
+	
+	button{
+	outline:none;
+	border: none;
+	text-align: center;
+font-family: economica;
+cursor: pointer;
+background: #333333;
+	  color: white;
+	}
+	
+	button:hover{
+	background:#595959;
+	}
 
-
-    button {
-      cursor: pointer;
-      text-align: center;
-      padding: 1px 3px;
-      font-family: sans-serif;
-      font-size: 0.8em;
-      width: 100px;
-      margin-top: 1px;
-      background: #cccccc;
+    body > button {
+      font-size: 3em;
+      width: 100%;
+	  margin-left:auto;
+	  margin-right:auto;
+	  height:48px;
+	  display:block;
+      margin-top: 5px;
+      
     }
-    div:hover {
-      background: #aaaaaa;
-    }
+	
+	ul {
+	list-style: none;
+	padding: 0;
+	margin-top: 5px;
+    margin-bottom: 5px;
+    margin-left: 2px;
+	}
+	
+	ul > li {
+	cursor: pointer;}
     
+	.buttons buttons {
+	display:inline-block;
+	margin:3px;
+	}
+	
+	ul > li > span {
+	margin-right:3px}
+	
+	.delete{
+	float:right;
+	}
+	
     </style>
     <script src="popup.js"></script>
   </head>
   <body>
-    <button id="download">Download this game</button>
+    <button id="download">DOWNLOAD THIS GAME</button>
+	<hr>
+	<div class="buttons">
+	<button class="resume">start</button>
+	<button class="pause">pause</button>
+	<button class="delete">X</button>
+	</div>
+	<ul id="downloads">
+	  <li><span class="progress">15%</span><span>test css</span></li>
+	  <li><span class="progress">15%</span><span>test css</span></li>
+	</ul>
   </body>
 </html>

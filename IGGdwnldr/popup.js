@@ -2,46 +2,72 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//downloads contains multiple download. A download is a game downlad currently in progress 
+//this is just an example of what the storage looks like
+var download1 = {"name":"iggGame1", "numOfParts":20, "progression":0};
+var download2 = {"name":"iggGame2", "numOfParts":20, "progression":0};
+var downloads = [download1, download2];
+
 var progress = 0;
 var shortenerLinks = [];
-var nextShortenerLink;
-var nextMegaLink;
+
+var nextShortenerTabId;
+var nextDownloadTabId;
+
+var tabToClose;
 
 document.addEventListener('DOMContentLoaded', function () {
+
 	document.getElementById("download").addEventListener('click', click);
-});
 
-chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
-	console.log("onmessage listener called");
-	if (request.action == 'handleShortenerLinksAction') {
-		handleShortenerLinks(request, sender, sendResponse);
-	} else if (request.action == 'openNewMegaLinkAction') {
-		openNewMegaLink(request, sender, sendResponse);
-	}
+	chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
-	sendResponse({
-		test : "good test"
+		if (request.action == 'handleShortenerLinksAction') {
+			console.log("calling handleShortenerLinks..");
+			handleShortenerLinks(request, sender, sendResponse);
+		} else if (request.action == 'openNewDownloadLinkAction') {
+			console.log("calling openNewDownloadLink..");
+			openNewDownloadLink(request, sender, sendResponse);
+		} else if (request.action == 'closeDownloadTabAction') {
+			tabToClose = sender.tab.id;
+		} else {
+			alert("Action called from script undefined");
+		}
+
 	});
 
 });
 
 chrome.downloads.onCreated.addListener(function (downloadItem) {
-
-	progress++;
-	if (progress <= shortenerLinks.length) {
-		openNextShortenerLink();
+	if (tabToClose != undefined) {
+		console.log("calling closeDownloadTab..");
+		chrome.tabs.remove(tabToClose, null);
 	}
+});
 
+chrome.downloads.onChanged.addListener(function (downloadItem) {
+	if (downloadItem.status == "complete") {
+		progress++;
+		if (progress <= shortenerLinks.length) {
+			openNextShortenerLink();
+		}
+	}
 });
 
 chrome.tabs.onUpdated.addListener(function (tabId, info) {
-	//if the new tab is a mega link
-	if (nextMegaLink != undefined && tabId == nextMegaLink.id && info.status == "complete") {
-		startMegaDownload(tabId);
-	}
-	//else the new tab is a shortener link
-	else if (info.status == "complete"){
-		getMegaLinkFromShortener(tabId);
+	if (info.status == "complete") {
+
+		//if shortener link: let the shortener timer run out. It is important to let the timer here in the background page because if there are any redirections we want to load the scripts afterward
+		//if download link: mega loads some content dynamically and drive have some redirects, so let a few seconds to make sure everything is loaded properly
+		setTimeout(function () {
+
+			if (tabId == nextShortenerTabId) {
+				getDownloadLinkFromShortener(tabId);
+			} else if (tabId == nextDownloadTabId) {
+				startDownload(tabId);
+			}
+
+		}, 10000);
 	}
 });
 
@@ -61,6 +87,8 @@ function handleShortenerLinks(request, sender, sendResponse) {
 	shortenerLinks = JSON.parse(request.shortenerLinks);
 	if (shortenerLinks != undefined && shortenerLinks.length > 0) {
 		openNextShortenerLink();
+	} else {
+		alert("Shortener Links not found. Are you on an igg-games.com page?");
 	}
 }
 
@@ -69,47 +97,51 @@ function openNextShortenerLink() {
 	var shortenerLink = shortenerLinks[progress];
 
 	if (shortenerLink != undefined) {
-
+		console.log("opening next shortener link");
 		chrome.tabs.create({
 			url : shortenerLink,
 			active : false
 		}, function (tab) {
-			nextShortenerLink = tab;
+			nextShortenerTabId = tab.id;
+			//the rest is handled by chrome tab listener
 		});
-
 	}
 }
 
-function getMegaLinkFromShortener(shortenerTabId) {
+function getDownloadLinkFromShortener(shortenerTabId) {
 	chrome.tabs.executeScript(shortenerTabId, {
 		file : 'thirdParty/jquery-2.2.3.min.js'
 	}, function () {
 		chrome.tabs.executeScript(shortenerTabId, {
-			file : 'getMegaLinkFromShortener.js'
+			file : 'getDownloadLinkFromShortener.js'
 		});
 	});
 }
 
-function openNewMegaLink(request, sender, sendResponse) {
+function openNewDownloadLink(request, sender, sendResponse) {
 	chrome.tabs.remove(sender.tab.id, null);
-	if (request.megaLink != undefined) {
+	console.log("open next download link");
+	if (request.downloadLink != undefined) {
 
 		chrome.tabs.create({
-			url : request.megaLink,
+			url : request.downloadLink,
 			active : false
 		}, function (tab) {
-			nextMegaLink = tab;
+			nextDownloadTabId = tab.id;
+			//the rest is handled by chrome tab listener
 		});
+	} else {
+		alert("Download link undefined. Shortener type might have changed.")
 	}
 }
 
-function startMegaDownload(megaTabId) {
+function startDownload(downloadTabId) {
 
-	chrome.tabs.executeScript(megaTabId, {
+	chrome.tabs.executeScript(downloadTabId, {
 		file : 'thirdParty/jquery-2.2.3.min.js'
 	}, function () {
-		chrome.tabs.executeScript(megaTabId, {
-			file : 'startMegaDownload.js'
+		chrome.tabs.executeScript(downloadTabId, {
+			file : 'startDownload.js'
 		});
 	});
 
