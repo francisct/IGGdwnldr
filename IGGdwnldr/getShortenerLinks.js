@@ -1,6 +1,10 @@
 var DRIVE = 'b:contains("Link Google Drive")';
 var MEGA = 'b:contains("Link Mega.co.nz")';
 
+var getTitle = function(){
+return $('h1').html();
+}
+
 var getAnchors = function(selector){
 	var div = $(selector).first().parent();
     var anchors = div.find('a');
@@ -26,6 +30,6 @@ if (anchors.size() < 1){
 var links = getLinks(anchors);
 var json = JSON.stringify(links);
 
-chrome.runtime.sendMessage({action: 'handleShortenerLinksAction', shortenerLinks: json}, function(text){
+chrome.runtime.sendMessage({action: 'handleShortenerLinksAction', gameName: getTitle(), shortenerLinks: json}, function(text){
 	
 });

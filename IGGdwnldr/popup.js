@@ -1,30 +1,66 @@
-// Copyright (c) 2012 The Chromium Authors. All rights reserved.
-// Use of this source code is governed by a BSD-style license that can be
-// found in the LICENSE file.
+// Copyright (c) 2016 Francis Cote-Tremblay
 
-//downloads contains multiple download. A download is a game downlad currently in progress 
+//GLOBALS *********************************************************
+
+//downloads contains multiple download. A download is a game downlad currently in progress
 //this is just an example of what the storage looks like
-var download1 = {"name":"iggGame1", "numOfParts":20, "progression":0};
-var download2 = {"name":"iggGame2", "numOfParts":20, "progression":0};
-var downloads = [download1, download2];
 
-var progress = 0;
-var shortenerLinks = [];
+var currentDownload = {
+	"id" : 1,
+	"gameName" : "iggGame1",
+	"progress" : 0,
+	"shortenerLinks" : []
+};
+
+function updateCurrentDownload(id, gameName, progress, shortenerLinks) {
+	currentDownload.id = id;
+	currentDownload.gameName = gameName;
+	currentDownload.progress = progress;
+	currentDownload.shortenerLinks = shortenerLinks;
+}
+
+//this is an example of what a typical download list element should look like
+function createDownloadLi(gameName, progress, numOfParts) {
+	return '<li>'
+	 + '<span class="progress">' + progress + '</span>'
+	 + '<span class="numOfParts">' + numOfParts + '</span>'
+	 + '<span class="gameName">' + gameName + '</span>'
+	 + '</li>';
+}
+
+function getDownloads() {
+	var downloads = {};
+
+	chrome.storage.local.get('downloads', function (data) {
+		downloads = data;
+	});
+
+	return downloads;
+}
 
 var nextShortenerTabId;
 var nextDownloadTabId;
 
 var tabToClose;
 
+//END GLOBALS *********************************************************
+
+
+//HANDLERS********************************************************
+
 document.addEventListener('DOMContentLoaded', function () {
 
 	document.getElementById("download").addEventListener('click', click);
+	
+	buildDownloadList();
 
+	//message listeners are initialized here to prevent multiple instance of the listener to be instantiated
 	chrome.runtime.onMessage.addListener(function (request, sender, sendResponse) {
 
 		if (request.action == 'handleShortenerLinksAction') {
 			console.log("calling handleShortenerLinks..");
-			handleShortenerLinks(request, sender, sendResponse);
+			addNewDownload(request, sender, sendResponse);
+			openNextShortenerLink(currentDownload);
 		} else if (request.action == 'openNewDownloadLinkAction') {
 			console.log("calling openNewDownloadLink..");
 			openNewDownloadLink(request, sender, sendResponse);
@@ -36,40 +72,45 @@ document.addEventListener('DOMContentLoaded', function () {
 
 	});
 
-});
-
-chrome.downloads.onCreated.addListener(function (downloadItem) {
-	if (tabToClose != undefined) {
-		console.log("calling closeDownloadTab..");
-		chrome.tabs.remove(tabToClose, null);
-	}
-});
-
-chrome.downloads.onChanged.addListener(function (downloadItem) {
-	if (downloadItem.status == "complete") {
-		progress++;
-		if (progress <= shortenerLinks.length) {
-			openNextShortenerLink();
+	chrome.downloads.onCreated.addListener(function (downloadItem) {
+		if (tabToClose != undefined) {
+			console.log("calling closeDownloadTab..");
+			chrome.tabs.remove(tabToClose, null);
 		}
-	}
-});
+	});
 
-chrome.tabs.onUpdated.addListener(function (tabId, info) {
-	if (info.status == "complete") {
-
-		//if shortener link: let the shortener timer run out. It is important to let the timer here in the background page because if there are any redirections we want to load the scripts afterward
-		//if download link: mega loads some content dynamically and drive have some redirects, so let a few seconds to make sure everything is loaded properly
-		setTimeout(function () {
-
-			if (tabId == nextShortenerTabId) {
-				getDownloadLinkFromShortener(tabId);
-			} else if (tabId == nextDownloadTabId) {
-				startDownload(tabId);
+	chrome.downloads.onChanged.addListener(function (downloadItem) {
+		if (downloadItem.status == "complete") {
+			currentDownload.progress = currentDownload.progress + 1;
+			persistDownload(currentDownload);
+			if (currentDownload.progress <= currentDownload.shortenerLinks.length) {
+				openNextShortenerLink();
 			}
+		}
+	});
 
-		}, 10000);
-	}
+	chrome.tabs.onUpdated.addListener(function (tabId, info) {
+		if (info.status == "complete") {
+
+			//if shortener link: let the shortener timer run out. It is important to let the timer here in the background page because if there are any redirections we want to load the scripts afterward
+			//if download link: mega loads some content dynamically and drive have some redirects, so let a few seconds to make sure everything is loaded properly
+			setTimeout(function () {
+
+				if (tabId == nextShortenerTabId) {
+					getDownloadLinkFromShortener(tabId);
+				} else if (tabId == nextDownloadTabId) {
+					startDownload(tabId);
+				}
+
+			}, 10000);
+		}
+	});
+
+
 });
+
+//END HANDLERS********************************************************
+
 
 function click(e) {
 	console.log("click function called");
@@ -83,28 +124,53 @@ function click(e) {
 
 }
 
-function handleShortenerLinks(request, sender, sendResponse) {
-	shortenerLinks = JSON.parse(request.shortenerLinks);
-	if (shortenerLinks != undefined && shortenerLinks.length > 0) {
-		openNextShortenerLink();
-	} else {
-		alert("Shortener Links not found. Are you on an igg-games.com page?");
+function buildDownloadList() {
+
+	var downloads = getDownloads();
+
+	for (var key in downloads) {
+		if (downloads.hasOwnProperty(key)) {
+			$('#downloads').append(createDownloadLi(downloads[key].gameName, downloads[key].progress, downloads[key].shortenerLinks.length));
+		}
 	}
 }
 
-function openNextShortenerLink() {
+function persistDownload(download) {
+	var downloads = getDownloads();
+	downloads[download.id] = download;
+	chrome.storage.local.set({
+		downloads : downloads
+	});
+}
 
-	var shortenerLink = shortenerLinks[progress];
+function addNewDownload(request, sender, sendResponse) {
 
-	if (shortenerLink != undefined) {
-		console.log("opening next shortener link");
-		chrome.tabs.create({
-			url : shortenerLink,
-			active : false
-		}, function (tab) {
-			nextShortenerTabId = tab.id;
-			//the rest is handled by chrome tab listener
-		});
+	var downloads = getDownloads();
+
+	updateCurrentDownload(Object.keys(downloads).length, request.gameName, 0, JSON.parse(request.shortenerLinks));
+	persistDownload(currentDownload);
+}
+
+function openNextShortenerLink(download) {
+	if (download.shortenerLinks != undefined && download.shortenerLinks.length > 0) {
+
+		var shortenerLink = download.shortenerLinks[download.progress];
+
+		if (shortenerLink != undefined) {
+			console.log("opening next shortener link");
+			chrome.tabs.create({
+				url : shortenerLink,
+				active : false
+			}, function (tab) {
+				nextShortenerTabId = tab.id;
+				//the rest is handled by chrome tab listener
+			});
+		} else {
+			alert("Shortener link in the shortener link list seems to be undefined. Website css selectors might have changed.");
+		}
+
+	} else {
+		alert("Shortener Links not found. Are you on an igg-games.com page?");
 	}
 }
 
