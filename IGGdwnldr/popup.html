@@ -27,7 +27,6 @@
     	text - align : center;
     	font - family : economica;
     	cursor : pointer;
-    	background :  # 333333;
     	color : white;
     }
 
@@ -35,16 +34,23 @@
     	background :  # 595959;
     }
 
-    body > button {
+    #download {
     	font - size : 3em;
-    	width : 100 % ;
+    	width : 100% ;
     	margin - left : auto;
     	margin - right : auto;
     	height : 48px;
     	display : block;
     	margin - top : 5px;
-
+        background: dimgray;
     }
+	
+	.actionButtons button{
+	display : inline - block;
+    	margin : 3px;
+	color:dimgray;
+	background:none;
+	}
 
     ul {
     	list - style : none;
@@ -56,30 +62,30 @@
 
     ul > li {
     	cursor : pointer;
+		margin-top:3px;
+		margin-bottom:3px;
     }
-
-    .buttons buttons {
-    	display : inline - block;
-    	margin : 3px;
-    }
-
+	
     ul > li > span {
-    	margin - right : 3px
+    	margin-left:3px;
+	margin-right:3px;
     }
+
 
     #delete {
     	float : right;
     }
 	
     </style>
-    <script src="popup.js"></script>
+    <script type="text/javascript" src="thirdParty/jquery-2.2.3.min.js"></script>
+    <script type="text/javascript" src="popup.js"></script>
   </head>
   <body>
 	<button id="download">DOWNLOAD THIS GAME</button>
 	<hr>
-		<div class="buttons">
-			<button id="resume">start</button>
-			<button id="pause">pause</button>
+		<div class="actionButtons">
+			<button id="resume">START</button>
+			<button id="pause">PAUSE</button>
 			<button id="delete">X</button>
 		</div>
 		<ul id="downloads">
