@@ -44,6 +44,7 @@ var nextShortenerTabId;
 var nextDownloadTabId;
 var downloadInProgressId;
 var tabToClose;
+initStorage();
 
 //END GLOBALS and data functions*********************************************************
 
@@ -90,10 +91,12 @@ chrome.downloads.onChanged.addListener(function (downloadItem) {
 			downloads[currentId].progress = downloads[currentId].progress + 1;
 
 			//if there are still other parts to download
-			if (downloads[currentId].progress <= downloads[currentId].shortenerLinks.length) {
-				openNextShortenerLink();
+			if (downloads[currentId].progress < downloads[currentId].shortenerLinks.length) {
+				openNextShortenerLink(downloads[currentId]);
 			} else {
-				downloads[currentId] = undefined;
+				alert(downloads[currentId].gameName + " download is complete.");
+				downloads[currentId].status = "complete";
+				downloads.current = undefined;
 			}
 
 			persistDownloads();
@@ -149,15 +152,19 @@ function initStorage() {
 function pauseDownloads() {
 	for (var key in downloads) {
 		if (downloads.hasOwnProperty(key) && downloads[key].id != undefined) {
-			downloads[key].status = "paused";
+			if (downloads[key].status != "complete") {
+				downloads[key].status = "paused";
+			}
 		}
 	}
+	chrome.downloads.cancel(downloadInProgressId);
+	chrome.tabs.remove([nextShortenerTabId, nextDownloadTabId, tabToClose]);
 	downloads.current = undefined;
 	persistDownloads();
 }
 
 function openNextShortenerLink(download) {
-	if (download.shortenerLinks != undefined && download.shortenerLinks.length > 0) {
+	if (download.shortenerLinks != undefined && download.shortenerLinks.length > 0 && download.status != "paused") {
 
 		var shortenerLink = download.shortenerLinks[download.progress];
 
@@ -180,19 +187,21 @@ function openNextShortenerLink(download) {
 }
 
 function getDownloadLinkFromShortener(shortenerTabId) {
-	chrome.tabs.executeScript(shortenerTabId, {
-		file : 'thirdParty/jquery-2.2.3.min.js'
-	}, function () {
+	if (downloads[downloads.current].status != "paused") {
 		chrome.tabs.executeScript(shortenerTabId, {
-			file : 'getDownloadLinkFromShortener.js'
+			file : 'thirdParty/jquery-2.2.3.min.js'
+		}, function () {
+			chrome.tabs.executeScript(shortenerTabId, {
+				file : 'getDownloadLinkFromShortener.js'
+			});
 		});
-	});
+	}
 }
 
 function openNewDownloadLink(request, sender, sendResponse) {
 	chrome.tabs.remove(sender.tab.id, null);
 	console.log("open next download link");
-	if (request.downloadLink != undefined) {
+	if (request.downloadLink != undefined && downloads[downloads.current].status != "paused") {
 
 		chrome.tabs.create({
 			url : request.downloadLink,
@@ -207,13 +216,13 @@ function openNewDownloadLink(request, sender, sendResponse) {
 }
 
 function startDownload(downloadTabId) {
-
-	chrome.tabs.executeScript(downloadTabId, {
-		file : 'thirdParty/jquery-2.2.3.min.js'
-	}, function () {
+	if (downloads[downloads.current].status != "paused") {
 		chrome.tabs.executeScript(downloadTabId, {
-			file : 'startDownload.js'
+			file : 'thirdParty/jquery-2.2.3.min.js'
+		}, function () {
+			chrome.tabs.executeScript(downloadTabId, {
+				file : 'startDownload.js'
+			});
 		});
-	});
-
+	}
 }

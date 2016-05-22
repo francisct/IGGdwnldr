@@ -24,9 +24,6 @@ function createDownloadLi(download) {
 //HANDLERS********************************************************
 
 document.addEventListener('DOMContentLoaded', function () {
-	chrome.runtime.getBackgroundPage(function (background) {
-		background.initStorage();
-	});
 	buildDownloadList();
 	document.getElementById("download").addEventListener('click', downloadOnClick);
 	document.getElementById("resume").addEventListener('click', resumeOnClick);
@@ -65,9 +62,13 @@ function resumeOnClick(e) {
 		} else if (background.downloads.current == undefined) {
 			$(".downloadSelector").each(function (index, element) {
 				if ($(element).prop("checked")) {
-					background.downloads.current = $(element).val();
-					background.downloads[$(element).val()].status = "downloading";
-					background.openNextShortenerLink(background.downloads[background.downloads.current]);
+					if (background.downloads[$(element).val()].status == "complete") {
+						alert("Download is complete.")
+					} else {
+						background.downloads.current = $(element).val();
+						background.downloads[$(element).val()].status = "downloading";
+						background.openNextShortenerLink(background.downloads[background.downloads.current]);
+					}
 				}
 			});
 			background.persistDownloads();
@@ -87,8 +88,8 @@ function deleteOnClick(e) {
 	chrome.runtime.getBackgroundPage(function (background) {
 		$(".downloadSelector").each(function (index, element) {
 			if ($(element).prop("checked")) {
-				
-				if (background.downloads.current == $(element).val()){
+
+				if (background.downloads.current == $(element).val()) {
 					background.downloads.current = undefined;
 				}
 				delete background.downloads[$(element).val()];
